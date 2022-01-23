@@ -1,0 +1,66 @@
+---
+title: 'RWorkshop w/ Cainz: Simulations'
+output:
+  html_document: default
+  html_notebook: default
+---
+
+This exercise is an example of how you would use monte carlo simulations to provide inference for distributions. 
+
+Specifically we work with the distribution of beta1 when there is an omitted variable bias and use the monte carlo method to highlight this bias.
+
+Exercise Outcomes:  
+  1. Be familiar with iteration works 
+  2. Recognise how **for** loops differ from **while** loops  
+  3. Be able to write your own monte carlo simulations using loops  
+  4. Understand the use of variables instead of hard coding
+
+Assumed Knowledge:  
+  - Performing linear regression using lm()
+  - Theory on Omitted Variables Bias  
+  
+
+
+```{r}
+# for Loop
+
+N = 1000
+n = 10
+
+
+beta1 = 4
+X1.mean = 10
+X1.sd = 4
+
+beta2 = -2
+gamma0 = 3
+gamma1 = 3
+
+e.sd = 5
+
+beta1.hat = 0
+beta2.hat = 0
+
+for (i in 1:N) {
+    
+    X1 = rnorm(n, X1.mean, X1.sd)
+    X2 = gamma0 + gamma1*X1 + rnorm(n, sd=e.sd)
+    Y = beta1*X1 + beta2*X2 + rnorm(n, sd=e.sd)
+    
+    model1 = lm(Y ~ X1)
+    model2 = lm(Y ~ X1 + X2)
+    
+    beta1.hat = beta1.hat + model1$coefficients[[2]]
+    beta2.hat = beta2.hat + model2$coefficients[[2]]
+}
+
+beta1.hat = beta1.hat/N
+beta2.hat = beta2.hat/N
+
+# normal OLS vs actual
+print(c(beta1.hat, beta2.hat))
+
+# Theoretical Unbiased Estimator
+print(beta1 + beta2*gamma1)
+
+```

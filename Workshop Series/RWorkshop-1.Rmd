@@ -1,0 +1,48 @@
+---
+title: "R Series Workshop 1 Exercises"
+author: William Ho
+output: html_notebook
+
+---
+
+# Heading 1
+## Heading 2
+### Heading 3
+
+*italics*
+**boldfont**
+
+These exercises were made to accompany the 1st of 4 R workshops that are held by
+the Actuarial Students' Society in Semester 2, 2021.
+
+## Exercise 1: Basic Functions, Vectors and Calculation
+
+1. Experiment with the colon symbol `:`
+    - Try typing this into the console `2:10` or `-4:30`
+    - What do those values give you? What if we use any integer `a` and `b`? `a:b`
+1. Experiment with `factorial(...)` where `...` is a vector
+1. Calculate in R: \LARGE $$\sum_{n=0}^{50} \frac{x^n}{n!}$$ \normalsize
+    - Hint: Try using vectors
+    
+## Exercise 2: Vectors and MAtrices
+1. Create a $1 \times 3$ vector **v** of numbers from 1 to 3
+1. Create a $3 \times 3$ matrix **M** of numbers from 1 to 9
+1. Experiment with:
+    - `v*M`
+    - `v%*%M`
+    - `M%*%v`
+
+## Exercise 3: Indexing
+
+1. Load the `iris` data frame into your script by typing iris and running it. It should look something like this
+```{r}
+head(iris)
+```
+2. Extract the columns with only *petal* data and store it in an object named `petals`
+1. Extract the columns with only *sepal* data and store it in an object named `sepals`
+1. Make a new data frame labelled training data using only rows 25--125 of the `petals` and `sepals` data frames 
+1. Can you think of a way to do step 4 with only one line of code?
+
+## Exercise 4: RMarkdown
+
+Recreate this exercise sheet!

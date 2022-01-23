@@ -1,0 +1,262 @@
+---
+title: "ASS x Cainz R Workshop 2021 - Day 2"
+output: html_notebook
+---
+
+Functions used:
+
+* `uniroot()`
+* `maxLik()`
+* `lm()`
+* `paste()`
+* `with()`
+* `summary()`
+* `plot()`
+* `sapply()`
+* `read.csv()`
+
+Packages:
+
+* `maxLik` --- `install.packages("maxLik")`
+
+### Exercise 1 - Solving 1D equations example
+
+
+Often we need to use software (*R*) to solve equations of the form $f(x) = 0$ for $x$. This can be done using the `uniroot()` function, applications of this could be something as simple as finding the $x$-intercepts of a curve, to finding the yield to maturity a dividend paying bond or finding a maximum likelihood estimate. We will do each of these in turn:
+
+1. Solve $x^3=0$:
+
+```{r}
+func <- function(x) {x^3}
+uniroot(func, lower = -10, upper = 10)$root
+
+curve(func, from = -5, to = 5)
+```
+
+
+2. Find the yield to maturity of a dividend paying bond maturing in 4 years, paying coupons annually with 4% interest p.a. and a face value of $\$100$ bought at $\$95$:
+
+The yield to maturity will be $x$, where $x$ is given by:
+
+$$95 = \dfrac{4}{(1+x)} + \dfrac{4}{(1+x)^2} + \dfrac{4}{(1+x)^3} + \dfrac{104}{(1+x)^4} \text{ or equivalently } 95 = 4 \times \dfrac{1-(1+x)^{-4}}{x} + \dfrac{100}{(1+x)^4}$$
+
+```{r}
+func <- function(x) {4*((1-(1+x)^(-4))/(x))+(100/((1+x)^(4))) - 95}
+#uniroot(func, lower = 0, upper = 1) # will not work due to divide by 0
+uniroot(func, lower = 0.0000001, upper = 1)$root #instead enter a very low number for the lower bound
+```
+
+3. Use the observed heights from `heights.csv` to find the an estimate of the mean through maximum likelihood estimation assuming that we know the data follows $\mathcal{N}(\mu, 10)$.
+
+```{r warning=FALSE, message=FALSE}
+#Maybe use uniroot instead w/ derivation at end
+library(maxLik)
+#Importing data
+heights <- read.csv('heights.csv')
+variance <- 10
+
+my.dnorm <- function(x, mu, var) {
+  (1/sqrt(2*pi*var)) * exp((-0.5/var)*(x - mu)^2)
+}
+my.norm.loglik <- function(mu, var){
+  loglik <- log(prod(my.dnorm(heights, mu, var)))
+  return(loglik)
+}
+
+(mle <- paste("MLE of mu:", maxLik(my.norm.loglik, start = 170, var = variance)$estimate))
+
+(mean <- paste("Mean:", mean(heights[,1]))) 
+
+```
+
+
+### Exercise 2 - CAPM example
+
+```{r}
+CAPM <- read.csv("CAPM_BAC.csv")
+```
+Using the with() function create a data set which contains the following data points:
+  1. Excess returns of BAC over the Risk Free (BAC.Returns - RF)
+  2. Market premium (Mkt.RF)
+
+```{r}
+dataset <- with(CAPM, data.frame("Excess.Rtn.BAC" = BAC.Returns - RF, "Mkt.Prem" = Mkt.RF))
+```
+
+Using lm(), run a linear regression of the excess BAC returns on the market premium.
+
+```{r}
+CAPM.model <- lm(Excess.Rtn.BAC ~ Mkt.Prem, dataset)
+summary(CAPM.model)
+```
+
+Recall back to Principles of Finance, the regression of a stocks excess returns on the excess returns of the market finds the Beta of the stock. Accordingly, through this simple linear regression we have found the Beta of Bank of America (BAC) across the give time horizon.
+
+### Exercise 3 - Dealing with missing data (Imputation)
+
+```{r}
+#Creating dataset
+set.seed(1)
+iris.missing <- iris
+#creating data with missing values
+missing_matrix <- matrix(as.logical(rbinom(5*150, 1, 0.05)), nrow = 150)
+iris.missing[missing_matrix] <- NA
+
+#The idea is to replace missing values in the first 4 columns 
+#with the mean of that species
+iris.cleaned <- iris.missing[!is.na(iris.missing$Species),]
+
+#Group the dataset by unique values of species
+#I will only do this for one species for the sake of explanability
+species <- "setosa"
+species.data <- iris.cleaned[iris.cleaned$Species == species,]
+for (i in 1:(ncol(species.data)-1)) {
+  #select the column we want to manipulate
+  column <- species.data[,i]
+  column[which(is.na(column))] = mean(column, na.rm = T)
+  #replace the column in the dataset with the manipulated column
+  species.data[,i] <- column
+}
+species.data
+
+#we can put another for loop over the whole code block 
+#to repeat this for each species
+```
+
+### Exercise 4 - Portfolio optimisation example
+
+1. Create a plot of the minimum variance frontier of portfolios that can be formed from security $A$ with $E[r_A] = 0.2, \sigma^2_A = 0.04$ and security $B$ with $E[r_B] = 0.4, \sigma^2_B = 0.16$.and $Cov(A,B) = -0.016$
+
+```{r}
+exp_returns <- c(0.2, 0.4)
+vars_returns <- c(0.04, 0.16)
+covar <- -0.016
+
+get_portfolio_returns <- function(w1, exp_returns) {
+  w2 <- 1 - w1
+  port_returns <- w1*exp_returns[1] + w2*exp_returns[2]
+  return(port_returns)
+}
+get_portfolio_variances <- function(w1, vars_returns, covar) {
+  w2 <- 1 - w1
+  cov <- covar
+  port_variance <- w1^2*vars_returns[1] + 2*w1*w2*covar + w2^2*vars_returns[2]
+  return(port_variance)
+}
+w1 <- seq(0,1,0.01)
+port_returns <- sapply(w1, get_portfolio_returns, exp_returns = exp_returns)
+port_var <- sapply(w1, get_portfolio_variances, vars_returns = vars_returns, covar = covar)
+plot(port_var, port_returns, type = 'l', xlim = c(0,0.2), ylim=c(0, 0.5))
+```
+
+### Exercise 5 - Data fitting example
+
+Packages:
+
+- fitdistrplus
+- maxLik
+- stats4
+
+
+Main Functions:
+
+- hist()
+- fitdist()
+- maxLik()
+- mle()
+- dlnorm()
+ 
+Exercise Outcomes:
+
+1. Be able to conduct simple data fitting using the Method of Maximum likelihood Estimation (MLE)
+2. Be able to plot a histogram with the probability density function superimposed
+3. Develop critical thinking ability comparing different packages and associated functions 
+ 
+
+Assumed Knowledge:
+
+1. the Method of Moments Estimation 
+2. the Method of Maximum Likelihood Estimation
+3. Basic R knowledge - write a function (will be taught in the 1st workshop)
+
+
+```{r}
+# If you don't already have these installed
+# install.packages("fitdistrplus")
+# install.packages("maxLik")
+# install.packages("stats4")
+library(fitdistrplus)
+library(maxLik)
+library(stats4)
+```
+
+```{r Exercise 1}
+#Initial data exploration
+getwd() 
+Insurance <- read.csv("insurance.csv")
+
+str(Insurance)
+summary(Insurance$Claims)
+hist(Insurance$Claims, main= "Histogram of the Claims", breaks=100, freq = FALSE, xlim = c(0,400), ylim = c(0,0.03))
+# Comment: Based on the histogram, we take a wild guess that the LOSS data follows a lognormal distribution as the data is very right-skewed i.e. heavy-tailed 
+# Issue: zero claim has high density
+
+non.zero.Insurance <- Insurance[-which((Insurance$Claims == 0)),]
+
+```
+
+```{r}
+#Fit a statistical distribution to the claims data using different packages
+
+#fitdistrplus - fitdist function
+
+MLE1 <- fitdist(non.zero.Insurance$Claims,"lnorm",method="mle")
+(estimates.mle <- summary(MLE1)$estimate)
+
+MLEmm <- fitdist(non.zero.Insurance$Claims,"lnorm",method="mme")
+(estimates.mme <- summary(MLEmm)$estimate)
+# the estimates from the method of moments are used as the initial values in maxLik() and mle()
+#Plotting - histogram
+
+hist(non.zero.Insurance$Claims, main= "Histogram of the Claims", breaks = 100, 
+     freq = FALSE, xlim = c(0,400), ylim = c(0,0.03))
+x_axis <- seq(0,400, 0.01)
+y_lnorm <- dlnorm(x_axis, mean = estimates.mle[1], sd = estimates.mle[2])
+lines(x_axis,y_lnorm, col="blue",lwd =1)
+legend(250,0.2, legend="dlnorm", col="blue",lty=1, cex=0.8)
+```
+
+```{r}
+#maxLik  
+
+logLikFun1 =function(param) {
+  mu=param[1]
+  sigma=param[2]
+  sum(dlnorm(non.zero.Insurance$Claims, mean = mu, sd = sigma, log = TRUE))
+  }
+MLE2=maxLik(logLik = logLikFun1, 
+            start = c(mu = estimates.mme[1], sigma = estimates.mme[2]))
+
+summary(MLE2)
+```
+
+```{r}
+#stats4
+
+logLikFun2 = function(mu, sigma){
+  sum(-dlnorm(non.zero.Insurance$Claims, meanlog = mu, sdlog = sigma, log = TRUE))
+   }
+ MLE3 = mle(minuslog=logLikFun2, 
+            start = list(mu = estimates.mme[[1]], sigma = estimates.mme[[2]]), method="L-BFGS-B")
+summary(MLE3)
+```
+
+After exercise question:
+As illustrated in the above exercise using three different packages and associated functions, it is now obvious to you that the maximum likelihood estimate is unique if it does exist. Thus, these three methods achieve mathematically-equivalent results. Which method would you prefer and why?
+
+
+
+
+
+
+
